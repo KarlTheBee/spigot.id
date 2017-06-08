@@ -1,0 +1,22 @@
+name: id
+version: 1.0.0
+description: A simple plugin to display item data
+author: KarlTheBee
+website : github.com/karlthebee/spigot.id
+main: de.karlthebee.spigot.id.ID
+
+commands:
+  id:
+    descrption: shows id data
+    usage: /id <player>
+    permission: id.id
+  iddetail:
+    description: shows extended id data
+    usage: /iddetail <player>
+    permission: id.detail
+
+permission:
+  id.id:
+    descrption: allows showing basic info
+  id.detail:
+    descrition: allows showing detailed info
