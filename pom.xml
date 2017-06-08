@@ -3,8 +3,6 @@
   <groupId>de.karlthebee.spigot</groupId>
   <artifactId>id</artifactId>
   <version>1.0.0</version>
-  <name>id</name>
-  <description>just let you find the "legacy" minecraft id from objects</description>
   
   
 	<properties>
@@ -33,4 +31,7 @@
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>
+	<description>A simple tool for minecraft architects which displays item data</description>
+	<url>https://github.com/karlthebee/spigot.id</url>
+	<name>spigot.id</name>
 </project>
