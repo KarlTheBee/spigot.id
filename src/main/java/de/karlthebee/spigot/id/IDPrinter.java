@@ -1,8 +1,10 @@
 package de.karlthebee.spigot.id;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -11,104 +13,134 @@ import org.bukkit.inventory.ItemStack;
 
 public class IDPrinter {
 
-	public static void printID(Player p, boolean detail) {
-		printID(p, p, detail);
+	public static void printID(Player p, Set<DetailType> types, Inputs input) {
+		IDPrinter printer = new IDPrinter(p, types);
+		printer.send(input);
 	}
 
-	public static void printID(Player p, Player receiver, boolean detail) {
+	private Player p;
+	private Set<DetailType> types;
+
+	public IDPrinter(Player p, Set<DetailType> types) {
+		super();
+		this.p = p;
+		this.types = types;
+	}
+
+	public void send(Inputs input) {
+		if (input == null) {
+			sendMainHand();
+			sendOffHand();
+			sendBlock();
+			return;
+		}
+
+		switch (input) {
+		case BLOCK:
+			sendBlock();
+			break;
+		case MAIN_HAND:
+			sendMainHand();
+			break;
+		case OFF_HAND:
+			sendOffHand();
+			break;
+		}
+
+	}
+
+	private void sendMainHand() {
 		ItemStack mainHand = p.getInventory().getItemInMainHand();
-		ItemStack offHand = p.getInventory().getItemInOffHand();
-
-		Block blockLookingAt = p.getTargetBlock(EnumSet.of(Material.AIR, Material.WATER, Material.STATIONARY_WATER),
-				10);
-
 		if (mainHand != null && mainHand.getType() != Material.AIR)
-			sendMessage(receiver, "Your main hand item is", itemToString(mainHand, detail));
-		if (offHand != null && offHand.getType() != Material.AIR)
-			sendMessage(receiver, "Your off hand item is", itemToString(offHand, detail));
-		if (blockLookingAt != null && blockLookingAt.getType() != Material.AIR)
-			sendMessage(receiver, "You're looking at", blockToString(blockLookingAt, detail));
+			sendMessage("Your main hand item is", itemToString(mainHand));
 	}
 
-	private static void sendMessage(Player receiver, String prefix, String name) {
-		receiver.sendMessage(ChatColor.GRAY + "[ID] " + ChatColor.WHITE + prefix + " " + name);
+	private void sendOffHand() {
+		ItemStack offHand = p.getInventory().getItemInOffHand();
+		if (offHand != null && offHand.getType() != Material.AIR)
+			sendMessage("Your off hand item is", itemToString(offHand));
+	}
+
+	private void sendBlock() {
+		Block blockLookingAt = p.getTargetBlock(EnumSet.of(Material.AIR, Material.WATER, Material.STATIONARY_WATER),
+				100);
+		if (blockLookingAt != null && blockLookingAt.getType() != Material.AIR)
+			sendMessage("You're looking at", blockToString(blockLookingAt));
+	}
+
+	private void sendMessage(String prefix, String name) {
+		p.sendMessage(ChatColor.GRAY + "[ID] " + ChatColor.WHITE + prefix + " " + name);
 	}
 
 	@SuppressWarnings("deprecation")
-	public static String itemToString(ItemStack stack, boolean detail) {
-		int amount = stack.getAmount();
+	public String itemToString(ItemStack stack) {
 		Material material = stack.getType();
 
-		StringBuilder builder = new StringBuilder();
-		builder.append(ChatColor.YELLOW);
-		builder.append(material.name().toLowerCase());
-		builder.append(ChatColor.WHITE);
-		builder.append(" (");
-		builder.append(stack.getTypeId() + ":" + stack.getDurability());
-		builder.append(") ");
+		EntryParent parent = new EntryParent();
+		// material name
+		parent.append(new Entry("name", formatEnum(material)));
+		// oldschool material id's
+		parent.append(new EntryParent(new Entry(stack.getTypeId(), stack.getDurability())));
+		// amount
+		parent.append(new Entry("amount", stack.getAmount() + "/" + stack.getMaxStackSize()));
 
-		if (detail) {
-			builder.append("amount: ");
-			builder.append(amount);
-			builder.append("/");
-			builder.append(stack.getMaxStackSize());
-			builder.append(", ");
-
-			if (stack.getEnchantments().size() != 0) {
-				builder.append("enchantments: ");
-				for (Enchantment e : stack.getEnchantments().keySet()) {
-					builder.append(e.getName());
-					builder.append(" : ");
-					builder.append(stack.getEnchantments().get(e));
-					builder.append("/");
-					builder.append(e.getMaxLevel());
-					builder.append(", ");
-				}
+		// enchantments
+		if (types.contains(DetailType.ENCHANTEMENT)) {
+			EntryParent enchParent = new EntryParent("enchantements");
+			boolean found = false;
+			for (Enchantment e : stack.getEnchantments().keySet()) {
+				enchParent.append(new Entry(formatEnum(e.getName()), stack.getEnchantments().get(e) + "/" + e.getMaxLevel()));
+				found = true;
 			}
+			if (found)
+				parent.append(enchParent);
 		}
 
-		return builder.toString();
+		return parent.toString();
 	}
 
 	@SuppressWarnings("deprecation")
-	public static String blockToString(Block block, boolean detail) {
-		StringBuilder builder = new StringBuilder();
+	public String blockToString(Block block) {
 
-		builder.append(ChatColor.YELLOW);
-		builder.append(block.getType().name().toLowerCase());
-		builder.append(ChatColor.WHITE);
-		builder.append(" ");
+		EntryParent parent = new EntryParent();
 
-		builder.append("(");
-		builder.append(block.getTypeId());
-		builder.append(":");
-		builder.append(block.getData());
-		builder.append(") ");
+		parent.append(new Entry("name", formatEnum(block.getType())));
+		parent.append(new EntryParent(new Entry(block.getTypeId(), block.getData())));
 
-		if (detail) {
-			builder.append("redstone: ");
-			builder.append(block.getBlockPower());
+		if (types.contains(DetailType.BIOME)) {
+			EntryParent parentBiome = new EntryParent("biome");
 
-			builder.append(", humidity: ");
-			builder.append(Math.round(block.getHumidity() * 100));
-			builder.append("%");
-
-			builder.append(", temperature: ");
-			builder.append(Math.round(block.getTemperature() * 100));
-			builder.append("%");
-
-			builder.append(", light: ");
-			builder.append(block.getLightLevel());
-			builder.append("/15");
-			builder.append(" (sky: ");
-			builder.append(block.getLightFromSky());
-			builder.append(", blocks: ");
-			builder.append(block.getLightFromBlocks());
-			builder.append("), ");
-
+			parentBiome.append("type", formatEnum(block.getBiome()));
+			parentBiome.append("humidity", Math.round(block.getHumidity() * 100) + "%");
+			parentBiome.append("temperature", Math.round(block.getTemperature() * 100) + "%");
+			parent.append(parentBiome);
 		}
 
-		return builder.toString();
+		if (types.contains(DetailType.REDSTONE)) {
+			EntryParent parentRedstone = new EntryParent("redstone");
+
+			parentRedstone.append("redstone power", block.getBlockPower());
+			parentRedstone.append("piston move reaction", formatEnum(block.getPistonMoveReaction()));
+			parent.append(parentRedstone);
+		}
+
+		if (types.contains(DetailType.LOCATON)) {
+			EntryParent parentLocation = new EntryParent("location");
+
+			Location l = block.getLocation();
+
+			parentLocation.append("world", l.getWorld().getName());
+			parentLocation.append("location (x,y,z)", l.getBlockX() + "," + l.getBlockY() + "," + l.getBlockZ());
+			parentLocation.append("chunk (x,z)", l.getChunk().getX() + "," + l.getChunk().getZ());
+			parent.append(parentLocation);
+		}
+
+		return parent.toString();
+
+	}
+
+	private static String formatEnum(Object e) {
+		return e.toString().toLowerCase().replaceAll("_", " ");
 	}
 
 }
