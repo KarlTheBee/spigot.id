@@ -18,7 +18,7 @@ If you enter these commands above, you will get basic information. To get more i
 **l**   *location information*
 **e**   *enchantmement information*
 **r**   *redstone information*
-**all**   *all of the above combined. is like entering* **bler***
+**all**   *all of the above combined. is like entering* **bler**
 
 You can combine these arguments, for example **/idblock br** will show biome and redstone information.
 
